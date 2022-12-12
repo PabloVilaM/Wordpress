@@ -1,104 +1,92 @@
+
 <?php
-
-/*
-Plugin Name: DAM experimento
-Plugin URI: http://www.danielcastelao.org/
-Description: Experimentación de varias técnicas para hacer un plugin
-Version: 1.0
-*/
-
 /**
- * Reemplaza plabra
- * @param $text el contenido del post
- * @return array|string|string[] el contenido del post modificado
+ * Plugin Name:       MalsonantesDataBase
+ * Plugin URI: http://wordpress.org/plugins/malsonantesDB/
+ * Description:       Cambia malsonantes por otras cosas
+ * Version:           1.0
+ * Author:            Pablo Vila
+ * Author URI: http://jacko
  */
-function renym_wordpress_typo_fix( $text ) {
-    // Objeto global del WordPress para trabajar con la BD
-    global $wpdb;
 
-    // recojemos el
+
+function crearTablas() {
+    global $wpdb;
     $charset_collate = $wpdb->get_charset_collate();
 
-    // le añado el prefijo a la tabla
-    $table_name = $wpdb->prefix . 'dam';
+    $table_name1 = $wpdb->prefix . 'mpalabras';
+    $table_name2 = $wpdb->prefix . 'recambios';
 
-    // recogemos todos los datos de la tabla
-    // los metemos en un array asociativo, en vez de indices nnumericos,
-    // los indices son los nombres de las columnas de la tabla
-    $resultado = $wpdb->get_results("SELECT * FROM " . $table_name, ARRAY_A);
-
-    // recorremos el resultado
-    foreach($resultado as $fila)
-    {
-        // mostramos el resultado en los logs
-        error_log("Recorremos resultado: " . $fila['time']);
-    }
-
-    return str_replace( 'WordPress', 'WordPressDAM', $text );
-}
-
-/**
- * Añadimos la función renym_wordpress_typo_fix al filtro 'the_content'
- * Se ejecutará cada vez que se cargue un post
- */
-add_filter( 'the_content', 'renym_wordpress_typo_fix' );
-
-/**
- * Añade un tabla a la BD
- * @return void
- */
-function myplugin_update_db_check() {
-    // Objeto global del WordPress para trabajar con la BD
-    global $wpdb;
-
-    // recojemos el
-    $charset_collate = $wpdb->get_charset_collate();
-
-    // le añado el prefijo a la tabla
-    $table_name = $wpdb->prefix . 'dam';
-
-    // creamos la sentencia sql
-    $sql = "CREATE TABLE $table_name (
-        id mediumint(9) NOT NULL AUTO_INCREMENT,
-        time datetime DEFAULT '0000-00-00 00:00:00' NOT NULL,
-        name tinytext NOT NULL,
+    $sql = "CREATE TABLE $table_name1 (
+        id mediumint(9) NOT NULL,
         text text NOT NULL,
         PRIMARY KEY (id)
     ) $charset_collate;";
 
-    // libreria que necesito para usar la funcion dbDelta
+    $sql2 = "CREATE TABLE $table_name2 (
+        id mediumint(9) NOT NULL,
+        text text NOT NULL,
+        PRIMARY KEY (id)
+    ) $charset_collate;";
+
     require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
     dbDelta( $sql );
-
-
-    // insertamos valores
-
-    $name='Pepe';
-    $text='Hola Mundo';
-
-    $result = $wpdb->insert(
-        $table_name,
-        array(
-            'time' => current_time( 'mysql' ),
-            'name' => $name,
-            'text' => $text,
-        )
-    );
-
-    error_log("Plugin DAM insert: " . $result);
+    dbDelta( $sql2 );
 }
+add_action('plugins_loaded', 'crearTablas');
 
-/**
- * Ejecuta 'myplugin_update_db_check', cuando el plugin se carga
- */
-add_action( 'plugins_loaded', 'myplugin_update_db_check' );
 
-function cambiar_malsonantes( $text){
-    $sustituibles = ["caca","calvo","gordo","tonto","furro"];
-    $recambios = ["popo","alopecico","ancho","bobo","animalista"];
-    return str_replace($sustituibles , $recambios, $text);
+function insertValoresTablas() {
+    global $wpdb;
+    $table_name1 = $wpdb->prefix . 'sustituibles';
+    $table_name2 = $wpdb->prefix . 'recambios';
+
+    $sql11 = "INSERT INTO $table_name1 (id, text) VALUES (1, 'caca')";
+    $sql12 = "INSERT INTO $table_name1 (id, text) VALUES (2, 'calvo')";
+    $sql13 = "INSERT INTO $table_name1 (id, text) VALUES (3, 'gordo')";
+    $sql14 = "INSERT INTO $table_name1 (id, text) VALUES (4, 'tonto')";
+    $sql15 = "INSERT INTO $table_name1 (id, text) VALUES (5, 'furro')";
+
+    $sql21 = "INSERT INTO $table_name2 (id, text) VALUES (1, 'popo')";
+    $sql22 = "INSERT INTO $table_name2 (id, text) VALUES (2, 'alopecico')";
+    $sql23 = "INSERT INTO $table_name2 (id, text) VALUES (3, 'ancho')";
+    $sql24 = "INSERT INTO $table_name2 (id, text) VALUES (4, 'bobo')";
+    $sql25 = "INSERT INTO $table_name2 (id, text) VALUES (5, 'animalista')";
+
+    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql11);
+    dbDelta( $sql12);
+    dbDelta( $sql13);
+    dbDelta( $sql14);
+    dbDelta( $sql15);
+
+    dbDelta( $sql21);
+    dbDelta( $sql22);
+    dbDelta( $sql23);
+    dbDelta( $sql24);
+    dbDelta( $sql25);
 }
-/*
- * Cambia el contenido del post
- */
-add_filter('the_content', 'cambiar_malsonantes');
+add_action('plugins_loaded', 'insertValoresTablas');
+
+
+function reescribir_malsonantes( $text ) {
+    global $wpdb;
+    $table_malsonantes = $wpdb->prefix . 'sustituibles';
+    $table_reemplazo = $wpdb->prefix . 'recambios';
+
+    $queryMalsonantes = $wpdb->get_results( "SELECT text FROM $table_malsonantes");
+    $queryReemplazos = $wpdb->get_results("SELECT text FROM $table_reemplazo");
+
+    $sustitutas = array();
+    for ($i = 0; $i < sizeof($queryMalsonantes); $i++) {
+        $sustitutas[] = $queryMalsonantes[$i]->text;
+    }
+
+    $recambios = array();
+    for ($i = 0; $i < sizeof($queryReemplazos); $i++) {
+        $recambios[] = $queryReemplazos[$i]->text;
+    }
+
+    return str_replace( $sustitutas, $recambios, $text);
+}
+add_filter('the_content', 'reescribir_malsonantes');
